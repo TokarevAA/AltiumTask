@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 
 namespace AltiumGen
 {
@@ -17,6 +18,8 @@ namespace AltiumGen
 			"it's actually a berry btw",
 			"anyway someone totally not"
 		};
+
+		private static readonly int _eol_bytes_count = Encoding.Default.GetByteCount(Environment.NewLine);
 
 
 		private static int Main()
@@ -50,7 +53,7 @@ namespace AltiumGen
 				string line = string.Concat(number, ". ", word);
 
 				streamWriter.WriteLine(line);
-				writtenBytes += line.Length + 2;
+				writtenBytes += line.Length + _eol_bytes_count;
 			}
 		}
 
