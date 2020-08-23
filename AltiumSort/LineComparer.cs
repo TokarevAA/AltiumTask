@@ -93,12 +93,7 @@ namespace AltiumSort
 					yLetter = yp[yIndex];
 				}
 
-				if (xLetter != yLetter)
-				{
-					return xLetter.CompareTo(yLetter);
-				}
-
-				return 0;
+				return xLetter.CompareTo(yLetter);
 			}
 
 			return 0;
