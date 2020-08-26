@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 
 namespace AltiumSort
 {
@@ -26,22 +27,26 @@ namespace AltiumSort
 			Directory.CreateDirectory(_outDirectory);
 
 			var streamWriter = new StreamWriter(GetChunkFileName());
-
-			while ((line = reader.ReadLine()) != null)
+			try
 			{
-				++linesCount;
-				streamWriter.WriteLine(line);
-
-				if (linesCount > 4096 * 512 && reader.Peek() >= 0)
+				while ((line = reader.ReadLine()) != null)
 				{
-					streamWriter.Dispose();
-					streamWriter = new StreamWriter(GetChunkFileName());
+					++linesCount;
+					streamWriter.WriteLine(line);
 
-					linesCount = 0;
+					if (linesCount > 4096 * 512 && reader.Peek() >= 0)
+					{
+						streamWriter.Dispose();
+						streamWriter = new StreamWriter(GetChunkFileName());
+
+						linesCount = 0;
+					}
 				}
 			}
-
-			streamWriter.Dispose();
+			finally
+			{
+				streamWriter.Dispose();
+			}
 		}
 
 
