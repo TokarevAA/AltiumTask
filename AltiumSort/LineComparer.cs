@@ -11,134 +11,102 @@ namespace AltiumSort
 		internal static readonly LineComparer Instance = new LineComparer();
 
 
-		private LineComparer()
-		{
-		}
+		private LineComparer() { }
 
 
-		public unsafe int Compare(string x, string y)
+		public int Compare(string left, string right)
 		{
-			if (x == y)
+			if (left == right)
 			{
 				return 1;
 			}
 
-			if (x == null)
+			if (left == null)
 			{
 				return -1;
 			}
 
-			if (y == null)
+			if (right == null)
 			{
 				return 1;
 			}
 
-			fixed (char* xp = x, yp = y)
+			ReadOnlySpan<char> leftSpan = left.AsSpan();
+			ReadOnlySpan<char> rightSpan = right.AsSpan();
+			
+			int leftSeparatorIndex = leftSpan.IndexOf(' ');
+			int rightSeparatorIndex = rightSpan.IndexOf(' ');
+
+			ReadOnlySpan<char> leftTextSlice = GetTextSlice(leftSpan, leftSeparatorIndex);
+			ReadOnlySpan<char> rightTextSlice = GetTextSlice(rightSpan, rightSeparatorIndex);
+
+			int result = Compare(leftTextSlice, rightTextSlice);
+
+			// If text differs there is no need to compare numbers
+			if (result != 0)
 			{
-				int maxLength = Math.Max(x.Length, y.Length);
-				int result = CompareText(xp, yp, x.Length, y.Length, maxLength);
-
-				if (result == 0)
-				{
-					result = CompareDigit(xp, yp, maxLength);
-				}
-
-				return result == 0 ? 1 : result;
+				return result;
 			}
+
+			ReadOnlySpan<char> leftNumberSlice = GetNumberSlice(leftSpan, leftSeparatorIndex);
+			ReadOnlySpan<char> rightNumberSlice = GetNumberSlice(rightSpan, rightSeparatorIndex);
+			
+			// If digits count not equal one number is obviously bigger
+			if (leftNumberSlice.Length != rightNumberSlice.Length)
+			{
+				return leftNumberSlice.Length - rightNumberSlice.Length;
+			}
+			
+			result = Compare(leftNumberSlice, rightNumberSlice);
+
+			// Returning 1 on 0 result required by Array.Sort distributing algorithm
+			return result == 0 ? 1 : result;
 		}
 
 
-		private static unsafe int CompareText(char* xp, char* yp, int xLength, int yLength, int maxLength)
+		private static ReadOnlySpan<char> GetTextSlice(in ReadOnlySpan<char> span, int separatorIndex)
 		{
-			int xIndex = -1;
-			int yIndex = -1;
-
-			for (var i = 0; i < maxLength; i++)
-			{
-				char xValue = xp[i];
-				char yValue = yp[i];
-
-				SetLetterIndex(in xValue, in i, ref xIndex);
-				SetLetterIndex(in yValue, in i, ref yIndex);
-
-				if (xIndex <= 0 || yIndex <= 0)
-				{
-					continue;
-				}
-
-				char xLetter = xp[xIndex];
-				char yLetter = yp[yIndex];
-
-				while (xLetter == yLetter)
-				{
-					++xIndex;
-					++yIndex;
-
-					if (xIndex >= xLength)
-					{
-						if (yIndex >= yLength)
-						{
-							break;
-						}
-
-						return -1;
-					}
-
-					if (yIndex >= yLength)
-					{
-						return 1;
-					}
-
-					xLetter = xp[xIndex];
-					yLetter = yp[yIndex];
-				}
-
-				return xLetter.CompareTo(yLetter);
-			}
-
-			return 0;
+			return span.Slice(separatorIndex + 1, span.Length - separatorIndex - 1);
 		}
-
-		private static void SetLetterIndex(in char value, in int index, ref int letterIndex)
+		
+		private static ReadOnlySpan<char> GetNumberSlice(in ReadOnlySpan<char> span, int separatorIndex)
 		{
-			if (letterIndex < 0)
-			{
-				if (value == ' ')
-				{
-					letterIndex = index + 1;
-				}
-			}
+			return span.Slice(0, separatorIndex - 1);
 		}
-
-		private static unsafe int CompareDigit(char* xp, char* yp, int maxLength)
+		
+		private static int Compare(in ReadOnlySpan<char> left, in ReadOnlySpan<char> right)
 		{
-			for (var i = 0; i < maxLength; i++)
+			var leftIndex = 0;
+			var rightIndex = 0;
+
+			char leftChar;
+			char rightChar;
+			
+			do 
 			{
-				char xValue = xp[i];
-				char yValue = yp[i];
-
-				if (xValue == '.')
+				leftChar = GetCharSafe(left, leftIndex);
+				rightChar = GetCharSafe(right, rightIndex);
+				
+				++leftIndex;
+				++rightIndex;
+				
+				if (leftIndex >= left.Length && rightIndex >= right.Length)
 				{
-					if (yValue == '.')
-					{
-						return 1;
-					}
-
-					return -1;
-				}
-
-				if (yValue == '.')
-				{
-					return 1;
-				}
-
-				if (xValue != yValue)
-				{
-					return xValue.CompareTo(yValue);
+					// GetCharSafe will return char.MinValue on overflowed index thus breaking up cycle manually
+					break;
 				}
 			}
+			while(leftChar == rightChar);
 
-			return 0;
+			return leftChar.CompareTo(rightChar);
+		}
+		
+		/// <summary>
+		/// Returns char.MinValue on overflowed index to treat shorter text as less
+		/// </summary>
+		private static char GetCharSafe(in ReadOnlySpan<char> span, in int index)
+		{
+			return index >= span.Length ? char.MinValue : span[index];
 		}
 	}
 }
