@@ -29,6 +29,7 @@ namespace AltiumTest
 		[InlineData("4. tets", "4. test")]
 		[InlineData("412. Test", "410. Test")]
 		[InlineData("33. Bb", "410. A")]
+		[InlineData("10029. anyway someone totally not", "1003. anyway someone totally not")]
 		[InlineData("33. Bb", null)]
 		public void CompareStrings_DifferentString_GreaterThanZero(string a, string b)
 		{
